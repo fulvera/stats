@@ -1,0 +1,305 @@
+<html>
+<head>
+    <meta charset="utf-8" />
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/css/bootstrap.min.css" integrity="sha384-Smlep5jCw/wG7hdkwQ/Z5nLIefveQRIY9nfy6xoR1uRYBtpZgI6339F5dgvm/e9B" crossorigin="anonymous">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.2/js/bootstrap.min.js" integrity="sha384-o+RDsa0aLu++PJvFqy8fFScvbHFLtbvScb8AjopnFD+iEQ7wo/CG0xlczd+2O/em" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    
+    <title>Estatísticas</title>
+
+    <script>
+        Array.prototype.where = function (filter) {
+
+            var collection = this;
+
+            switch(typeof filter) { 
+
+                case 'function': 
+                    return $.grep(collection, filter); 
+
+                case 'object':
+                    for(var property in filter) {
+                    if(!filter.hasOwnProperty(property)) 
+                        continue; // ignore inherited properties
+
+                    collection = $.grep(collection, function (item) {
+                        return item[property] === filter[property];
+                    });
+                    }
+                    return collection.slice(0); // copy the array 
+                                            // (in case of empty object filter)
+
+                default: 
+                    throw new TypeError('func must be either a' +
+                        'function or an object of properties and values to filter by'); 
+            }
+        };
+
+        var stats = [];
+        var events = [];
+        var chapei = {
+            goals: 0,
+            possession: 0,
+            shots: 0,
+            shotsTarget: 0,
+            yellowCards: 0,
+            redCards: 0,
+            corners: 0,
+            goalKicks: 0,
+            lineUp: ['Cássio', 'Fagner', 'Pedro Henrique', 'Henrique', 'Danilo Avelar', 'Gabriel', 'Renê Jr', 'Romero', 'Rodriguinho', 'Mateus Vital', 'Roger'],
+            bench : ['Walter', 'Léo Santos', 'Marlon', 'Mantuan', 'Juninho Capixaba', 'Ralf', 'Paulo Roberto', 'Pedrinho', 'Jadson', 'Marquinhos Gabriel', 'Jonathas']
+        };
+        var opponent = {
+            goals: 0,
+            possession: 0,
+            shots: 0,
+            shotsTarget: 0,
+            yellowCards: 0,
+            redCards: 0,
+            corners: 0,
+            goalKicks: 0
+        };
+
+        $(document).ready(() => {
+            $('#chapeiPlayers').append($('<option />').val('').text('Selecione'));
+            let chapeiPlayers = chapei.lineUp.concat(chapei.bench);
+            $.each(chapeiPlayers, (index, value) => {
+                $('#chapeiPlayers').append($('<option />').val(value).text(value));
+            });
+
+            $('.possession, .period').click(function() {
+                let type = $(this).data('type');
+
+                stats.push({
+                    type: type,
+                    date: $.now()
+                });
+                showStats();
+                
+                var sender = $(this);
+
+                if (sender.hasClass('period')) {
+                    $('.period').prop("disabled", true);
+                    
+                    $('.event').prop("disabled",false);
+                    $('.possession').prop("disabled", false);                    
+                    if (type == 5 || type == 7) {
+                        $('.possession').prop("disabled", true);
+                        $('.period').prop("disabled", true);
+                        $('.event').prop("disabled",true);
+                    }                     
+                    $('.period[data-type='+ (type + 1) +']').prop("disabled", false);
+                } else {
+                    $('.possession').prop("disabled", false);
+                }
+                $(this).prop("disabled",true);
+            });
+
+            $('.event').click(function() {
+                let type = $(this).data('type');
+
+                events.push({
+                    type: type,
+                    date: $.now(),
+                    player: $('#chapeiPlayers').val()
+                });
+                $('#chapeiPlayers').val('');
+                showStats();
+                showEvents();
+            });
+        });
+
+        function showStats() {
+            const promises = [
+                new Promise(resolve => calculatePossession(resolve)),
+                new Promise(resolve => calculateStats(resolve))
+            ];
+
+            Promise.all(promises)
+                   .then(data => {
+                var html = '<tr><td class="text-center">' + chapei.goals + '</td><td class="text-center">Gols</td><td class="text-center">' + opponent.goals + '</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.shots + '</td><td class="text-center">Finalizações</td><td class="text-center">' + opponent.shots + '</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.shotsTarget + '</td><td class="text-center">Finalizações no alvo</td><td class="text-center">' + opponent.shotsTarget + '</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.possession + '%</td><td class="text-center">Posse de Bola</td><td class="text-center">' + opponent.possession + '%</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.corners + '</td><td class="text-center">Escanteios</td><td class="text-center">' + opponent.corners + '</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.goalKicks + '</td><td class="text-center">Tiros de Meta</td><td class="text-center">' + opponent.goalKicks + '</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.yellowCards + '</td><td class="text-center">Cartões Amarelos</td><td class="text-center">' + opponent.yellowCards + '</td></tr>';
+                html += '<tr><td class="text-center">' + chapei.redCards + '</td><td class="text-center">Cartões Vermelhos</td><td class="text-center">' + opponent.redCards + '</td></tr>';
+                $('#statsList').html(html);
+            });
+        }
+
+        function calculatePossession(resolve) {
+            if (stats.length) {
+                let lastStat = stats[0];
+                let possession1 = 0, possession2 = 0, noPossession = 0;
+                
+                $.each(stats, function(index, value) { 
+                    if (index > 0) {
+                        if (lastStat.type != value.type) {
+                            let time = value.date - lastStat.date
+                            if (lastStat.type == 1)
+                                possession1 += time; 
+                            if (lastStat.type == 2)
+                                noPossession += time; 
+                            if (lastStat.type == 3)
+                                possession2 += time; 
+                        }
+                        lastStat = value;
+                    }
+                });
+
+                // let timeOfGame = $.now() - stats[0].date;
+                let timeOfGame = possession1 + possession2;
+                console.log(timeOfGame);
+                if (timeOfGame > 0) {
+                    possession1 = (100 * possession1) / timeOfGame;
+                    possession2 = (100 * possession2) / timeOfGame;
+                    chapei.possession = stats[0].type == 1 ? possession1 : possession2;
+                    opponent.possession = stats[0].type == 1 ? possession2 : possession1;
+                }
+            }
+
+            resolve();
+        }
+
+        function calculateStats(resolve) {
+            if (events.length) {
+                chapei.goals = events.where({type: 1}).length;
+                chapei.shots = events.where({type: 6}).length;
+                chapei.shotsTarget = events.where({type: 5}).length;
+                chapei.corners = events.where({type: 15}).length;
+                chapei.goalKicks = events.where({type: 17}).length;
+                chapei.yellowCards = events.where({type: 9}).length;
+                chapei.redCards = events.where({type: 10}).length;
+
+                opponent.goals = events.where({type: 4}).length;                
+                opponent.shots = events.where({type: 7}).length;
+                opponent.shotsTarget = events.where({type: 8}).length;
+                opponent.corners = events.where({type: 16}).length;
+                opponent.goalKicks = events.where({type: 18}).length;
+                opponent.yellowCards = events.where({type: 12}).length;
+                opponent.redCards = events.where({type: 11}).length;
+            }
+
+            resolve();
+        }
+
+        function showEvents() {
+            $('#eventsList').html('');   
+            let html = '';         
+            if (events.length) {
+                $.each(events, (index, value) => {
+                    let eventDescription = getEventDescription(value.type);
+                    if (value.player) eventDescription += '(' + value.player + ')';
+                    html += '<tr><td class="text-center">' + value.date + '</td><td class="text-center">' + eventDescription + '</td><td></td></tr>'
+                });
+                $('#eventsList').html(html);               
+            }
+        }
+
+        function getEventDescription(type) {
+            if (type == 1) return 'Gol Chapei';
+            if (type == 2) return 'Assistência Chapei';
+            if (type == 3) return 'Assistência Adversário';
+            if (type == 4) return 'Gol Adversário';
+            if (type == 5) return 'Finalização Certa Chapei';
+            if (type == 6) return 'Finalização Chapei';
+            if (type == 7) return 'Finalização Adversário';
+            if (type == 8) return 'Finalização Certa Adversário';
+            if (type == 9) return 'Cartão Amarelo Chapei';
+            if (type == 10) return 'Cartão Vermelho Chapei';
+            if (type == 11) return 'Cartão Vermelho Adversário';
+            if (type == 12) return 'Cartão Amarelo Adversário';
+            if (type == 13) return 'Saiu Chapei';
+            if (type == 14) return 'Saiu Adversário';
+            if (type == 15) return 'Escanteio Chapei'; 
+            if (type == 16) return 'Escanteio Adversário'; 
+            if (type == 17) return 'Tiro de Meta Chapei'; 
+            if (type == 18) return 'Tiro de Meta Adversário';        
+            
+            return '';
+        }
+    </script>
+</head>
+<body>
+    <h1>Chapei x Wake</h1>
+
+    <div class="container-fluid">
+        <div class="row">
+            <div class="col-sm-3 text-center"><button class="btn period" data-type="4">Iniciar</button></div>
+            <div class="col-sm-3 text-center"><button class="btn period" data-type="5" disabled>Intervalo</button></div>
+            <div class="col-sm-3 text-center"><button class="btn period" data-type="6" disabled>Segundo Tempo</button></div>
+            <div class="col-sm-3 text-center"><button class="btn period" data-type="7" disabled>Fim do jogo</button></div>
+        </div>
+        <hr />
+        <div class="row">
+            <div class="col-sm-3 text-center"><button class="btn btn-success possession" data-type="1" disabled>Posse Chapei</button></div>
+            <div class="col-sm-6 text-center"><button class="btn possession" data-type="2" disabled>Bola fora de jogo</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger possession" data-type="3" disabled>Posse Adversário</button></div>
+        </div>
+        <hr />        
+        <div class="row">
+            <div class="col-sm-6 text-center"><select id="chapeiPlayers"></select></div>
+            <div class="col-sm-6"></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="1" data-chapei="true" disabled>Gol Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="2" data-chapei="true" disabled>Assistência Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger event" data-type="3" data-chapei="false" disabled>Assistência Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger event" data-type="4" data-chapei="false" disabled>Gol Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="5" data-chapei="true" disabled>Finalização certa Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="6" data-chapei="true" disabled>Finalização Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger event" data-type="7" data-chapei="false" disabled>Finalização Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger event" data-type="8" data-chapei="false" disabled>Finalização certa Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="9" data-chapei="true" disabled>Cartão Amarelo Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="10" data-chapei="true" disabled>Cartão Vermelho Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger event" data-type="11" data-chapei="false" disabled>Cartão Vermelho Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-danger event" data-type="12" data-chapei="false" disabled>Cartão Amarelo Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="13" data-chapei="true" disabled>Saiu Chapei</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="14" data-chapei="true" disabled>Entrou Chapei</button></div>
+            <div class="col-sm-6"></div>
+        </div>
+        <hr />        
+        <div class="row">
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="15" data-chapei="true" disabled>Escanteio Chapei</button></div>
+            <div class="col-sm-3 text-center offset-sm-6"><button class="btn btn-danger event" data-type="16" data-chapei="false" disabled>Escanteio Adversário</button></div>
+            <div class="col-sm-3 text-center"><button class="btn btn-success event" data-type="17" data-chapei="true" disabled>Tiro de Meta Chapei</button></div>
+            <div class="col-sm-3 text-center offset-sm-6"><button class="btn btn-danger event" data-type="18" data-chapei="false" disabled>Tiro de Meta Adversário</button></div>
+        </div>
+        <hr />          
+        <div class="row">      
+            <div class="col-sm-12">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="20%" class="text-center">Chapei</th>
+                            <th width="60%" class="text-center">Estatística</th>
+                            <th width="20%" class="text-center">Adversário</th>
+                        </tr>
+                    </thead>
+                    <tbody id="statsList">
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <hr />          
+        <div class="row">      
+            <div class="col-sm-12">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th width="20%" class="text-center">Minuto</th>
+                            <th width="80%" class="text-center">Evento</th>
+                        </tr>
+                    </thead>
+                    <tbody id="eventsList">
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div> 
+</body>
+</html>
