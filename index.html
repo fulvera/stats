@@ -48,8 +48,8 @@
             redCards: 0,
             corners: 0,
             goalKicks: 0,
-            lineUp: ['Cássio', 'Fagner', 'Pedro Henrique', 'Henrique', 'Danilo Avelar', 'Gabriel', 'Renê Jr', 'Romero', 'Rodriguinho', 'Mateus Vital', 'Roger'],
-            bench : ['Walter', 'Léo Santos', 'Marlon', 'Mantuan', 'Juninho Capixaba', 'Ralf', 'Paulo Roberto', 'Pedrinho', 'Jadson', 'Marquinhos Gabriel', 'Jonathas']
+            lineUp: ['Lê', 'Fê', 'Wander', 'Shimegui', 'Walace', 'Chimba', 'Anderson', 'Paulinho', 'Bruninho', 'Andrey', 'Jair'],
+            bench : ['Léo', 'Gui Azevedo', 'Morais']
         };
         var opponent = {
             goals: 0,
@@ -157,8 +157,8 @@
                 if (timeOfGame > 0) {
                     possession1 = (100 * possession1) / timeOfGame;
                     possession2 = (100 * possession2) / timeOfGame;
-                    chapei.possession = stats[0].type == 1 ? possession1 : possession2;
-                    opponent.possession = stats[0].type == 1 ? possession2 : possession1;
+                    chapei.possession = stats[1].type == 1 ? possession1 : possession2;
+                    opponent.possession = stats[1   ].type == 1 ? possession2 : possession1;
                 }
             }
 
